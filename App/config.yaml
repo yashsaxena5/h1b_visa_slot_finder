@@ -1,0 +1,146 @@
+# H1B Slot Watcher Configuration
+app:
+  name: "H1B-Slot-Watcher"
+  version: "1.0.0"
+  enabled: true  # Global kill switch
+
+browser:
+  # This app connects to a Chrome instance YOU launch yourself, over the
+  # DevTools protocol - it never launches or manages the browser process.
+  # Start Chrome first:
+  #   google-chrome --remote-debugging-port=9222 --user-data-dir=./browser_profile
+  cdp_url: "http://localhost:9222"
+  viewport:
+    width: 1280
+    height: 720
+  timeout: 30000  # 30 seconds
+
+portal:
+  url: "https://www.usvisascheduling.com/"
+  allowed_domains:
+    - "usvisascheduling.com"
+    - "cgifederal.com"
+  
+  # Selectors
+  selectors:
+    login_button: "button:has-text('Sign In')"
+    appointment_menu: "a:has-text('Appointment')"
+    continue_button: "button:has-text('Continue')"
+
+    # OFC location dropdown (SPA/AJAX - the URL never changes when you
+    # pick a city). These are best-guess defaults; inspect the real page
+    # (right-click the element -> Inspect -> Copy selector) and replace
+    # them with the exact match for what you actually see.
+    ofc_dropdown: "select#post_select"
+    results_container: ".atlas_validationalert, .alert-danger"
+    calendar_container: ".calendar, .datepicker, table.ui-datepicker-calendar"
+    no_slots_pattern: "no\\s+slots?\\s+available"
+
+  # AJAX settle timing for the OFC dropdown
+  ajax:
+    settle_timeout_ms: 15000     # max wait for the AJAX response after picking a location
+    jitter_min_seconds: 3        # random pause between locations...
+    jitter_max_seconds: 7        # ...so we don't hammer the backend API
+
+  # Conservative recovery from portal-side glitches (native dialogs like
+  # "PSE0501" that leave the DOM stuck on "Loading..."). Deliberately
+  # slow: only recovers after entire cycles come back glitched, and even
+  # then only after a long human-like pause. Recovers via browser history
+  # (back, then forward) rather than page.reload() - reload() issues a
+  # fresh request to the exact same URL, a pattern some WAFs specifically
+  # watch for; navigating back then forward is a far more ordinary
+  # browsing action. Falls back to a plain reload only if there's no
+  # history to go back to.
+  dialog_recovery:
+    min_glitched_cycles_before_reload: 1   # fully-glitched cycles to tolerate before recovering
+    reload_backoff_min_seconds: 45
+    reload_backoff_max_seconds: 90
+    notify_after_glitched_cycles: 3        # send one Telegram/desktop notice if still glitching after this many cycles despite recovery attempts
+
+  # Small randomized pauses/click timings around dropdown interaction -
+  # not to disguise anything, just so the page's own hover/mousedown/
+  # mouseup listeners see a complete interaction sequence rather than an
+  # instantaneous value change.
+  humanize:
+    pre_click_delay_min_seconds: 0.2
+    pre_click_delay_max_seconds: 0.5
+    click_delay_min_ms: 50
+    click_delay_max_ms: 150
+
+  # Detection patterns
+  patterns:
+    captcha:
+      - "captcha"
+      - "verify you are human"
+      - "verifying you are human"
+      - "security check"
+      - "performing security verification"
+      - "checking your browser"
+      - "just a moment"
+      - "turnstile"
+    maintenance: ["maintenance", "under construction", "try again later"]
+    session_expired: ["session expired", "log in again", "sign in to continue"]
+    # access_denied: ["access denied", "forbidden", "blocked"]
+    # access_denied: ["access denied on this server", "error 1020", "cloudflare block"]
+    access_denied:
+      - "error 1020: access denied"
+      - "the owner of this website has banned your access"
+      - "access limitation"
+      - "prohibited conduct"
+
+monitor:
+  check_interval: 30  # seconds (minimum)
+  max_backoff: 3600   # 1 hour
+  maintenance_backoff: 300  # seconds to wait before re-checking during a maintenance window
+  max_unrecognized_state_retries: 10  # checks to tolerate being on the portal but not yet on a recognized page, before escalating to a human
+
+  # Appointment filters
+  filters:
+    category: "H-1B"
+    locations:
+      - "MUMBAI VAC"
+      - "NEW DELHI VAC"
+      - "CHENNAI VAC"
+      - "HYDERABAD VAC"
+      - "KOLKATA VAC"
+    appointment_types:
+      - "Interview"
+      - "Drop-off"
+
+notifications:
+  telegram:
+    enabled: true
+    bot_token: "${TELEGRAM_BOT_TOKEN}"
+    chat_id: "${TELEGRAM_CHAT_ID}"
+    rate_limit: 20  # messages per minute
+    # Routine per-cycle status report (timestamp + each location's
+    # No slots/Glitched/Slots Found) - throttled to at most once per this
+    # many minutes, independent of the (much shorter) poll interval, so
+    # it's a periodic heartbeat rather than a message per check. 0 disables.
+    cycle_summary_interval_minutes: 30
+  
+  desktop:
+    enabled: true
+    timeout: 60  # seconds
+  
+  sound:
+    enabled: true
+    sound_file: "./assets/alarm.mp3"  # falls back to a built-in macOS sound if missing
+    repeat_interval: 5   # seconds between repeats
+    max_repeats: 24      # ~2 min at the default interval, then auto-stop
+
+safety:
+  max_retries: 3
+  backoff_base: 30  # seconds
+  jitter: 5         # +/- seconds
+  kill_switch_hotkey: "<ctrl>+<shift>+q"  # global hotkey to stop immediately
+  watchdog_max_restarts: 5        # max reconnect attempts...
+  watchdog_window_seconds: 3600   # ...within this many seconds before giving up
+  watchdog_restart_backoff: 10    # seconds to wait before each reconnect attempt
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "./logs/app.log"
+  max_size: 10485760  # 10MB
+  backup_count: 5

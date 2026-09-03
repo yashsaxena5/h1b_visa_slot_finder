@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head><title>OFC Schedule</title></head>
+<body>
+  <select id="ofc">
+    <option value="">Select OFC Center</option>
+    <option value="Mumbai">Mumbai</option>
+    <option value="New Delhi">New Delhi</option>
+  </select>
+
+  <div id="ofcResults">Loading...</div>
+
+  <script>
+    document.getElementById('ofc').addEventListener('change', function () {
+      // Simulates the portal's native "PSE0501" error dialog. The
+      // results area deliberately never updates afterward - simulating
+      // the DOM staying stuck on "Loading..." after the glitch.
+      alert('Error code PSE0501: An unexpected error occurred. Please try again.');
+    });
+  </script>
+</body>
+</html>

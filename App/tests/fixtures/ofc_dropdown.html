@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head><title>OFC Schedule</title></head>
+<body>
+  <select id="ofc">
+    <option value="">Select OFC Center</option>
+    <option value="Mumbai">Mumbai</option>
+    <option value="New Delhi">New Delhi</option>
+    <option value="Chennai">Chennai</option>
+    <option value="Hyderabad">Hyderabad</option>
+    <option value="Kolkata">Kolkata</option>
+  </select>
+
+  <div id="ofcResults"></div>
+
+  <script>
+    document.getElementById('ofc').addEventListener('change', function (e) {
+      var results = document.getElementById('ofcResults');
+      results.innerHTML = '';
+      var location = e.target.value;
+      // Simulates the portal's AJAX round-trip delay before the result renders.
+      setTimeout(function () {
+        if (location === 'Mumbai') {
+          results.innerHTML =
+            '<table class="calendar">' +
+            '<tr><td class="available" data-date="2026-08-21" data-time="09:30" data-location="Mumbai">21</td></tr>' +
+            '</table>';
+        } else {
+          results.innerHTML = '<p class="no-slots">No Slots Available</p>';
+        }
+      }, 150);
+    });
+  </script>
+</body>
+</html>

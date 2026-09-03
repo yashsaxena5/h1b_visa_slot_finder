@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head><title>Appointment Scheduling</title></head>
+<body>
+  <div class="appointment-list">
+    <table>
+      <tr><td class="available" data-date="2026-08-21" data-available="true">21</td></tr>
+    </table>
+
+    <!-- Genuinely selectable slot: no disabled/aria-disabled attributes -->
+    <div class="slot-item available" data-date="2026-08-21" data-time="09:30" data-location="Mumbai">
+      Available Slot
+    </div>
+    <button data-time="09:30" class="time-slot">09:30 AM</button>
+
+    <!-- False positive: structurally looks like an available slot-item,
+         but is aria-disabled - the validator must catch this. -->
+    <div class="slot-item available" data-date="2026-08-22" data-time="10:00" data-location="Mumbai" aria-disabled="true">
+      Not Really Available
+    </div>
+  </div>
+</body>
+</html>
