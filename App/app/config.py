@@ -28,7 +28,9 @@ class Config:
     def __init__(self):
         if not hasattr(self, '_initialized'):
             self._initialized = True
-            self._config_path = Path(__file__).parent.parent / "config" / "config.yaml"
+            p1 = Path(__file__).parent.parent / "config" / "config.yaml"
+            p2 = Path(__file__).parent.parent / "config.yaml"
+            self._config_path = p1 if p1.exists() else p2
             self._config_mtime: Optional[float] = None
             self._load_config()
 
